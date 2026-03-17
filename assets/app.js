@@ -1,5 +1,11 @@
+// Ruta: assets/app.js
+
 //  Portal TMI · app.js (JRA 10feb2025 0119)
 // ===============================
+
+//#1 IMPORT DEL MÓDULO DE LIQUIDACIÓN
+// carga el módulo independiente de facturas sin romper la base actual
+import * as FacturasLiquidacionModule from './facturas-liquidacion.js';
 
 // ✅ FIRMA dura para confirmar que ESTE archivo está corriendo
 console.log('%c[APP] RUNNING app.js v14 LOG FIX · ' + new Date().toISOString(), 'color:#16a34a;font-weight:900');
@@ -49,6 +55,66 @@ const hmToMin = (hhmm) => {
   return (h * 60 + (m || 0)) | 0;
 };
 const todayStr = () => new Date().toISOString().slice(0, 10);
+
+//#2 CONTEXTO COMPARTIDO PARA EL MÓDULO DE LIQUIDACIÓN
+// expone helpers y estado actual al módulo independiente sin alterar la lógica existente
+function refreshSharedAppContext() {
+  window.__TMI_APP_CONTEXT__ = {
+    supabase,
+    st,
+    routeTo,
+    showInfoModal,
+    showConfirmModal,
+    toast,
+    helpers: {
+      $,
+      show,
+      hide,
+      fmt2,
+      minToHM,
+      hmToMin,
+      todayStr,
+    },
+  };
+  console.log('[APP] __TMI_APP_CONTEXT__ actualizado');
+}
+
+//#3 RENDER SEGURO DEL MÓDULO DE LIQUIDACIÓN
+// inicializa el módulo real y luego carga la vista usando los nombres de export correctos
+async function renderFacturasLiquidacionView() {
+  try {
+    refreshSharedAppContext();
+
+    const initFn = FacturasLiquidacionModule?.initFacturasLiquidacionModule;
+    const loadFn = FacturasLiquidacionModule?.loadFacturasLiquidacionView;
+
+    if (typeof initFn !== 'function') {
+      console.warn('[APP] facturas-liquidacion.js no exporta initFacturasLiquidacionModule');
+      return;
+    }
+
+    if (typeof loadFn !== 'function') {
+      console.warn('[APP] facturas-liquidacion.js no exporta loadFacturasLiquidacionView');
+      return;
+    }
+
+    const initOk = initFn();
+    if (initOk === false) {
+      console.warn('[APP] el módulo de liquidación no encontró los contenedores esperados');
+      return;
+    }
+
+    await loadFn({
+      supabaseClient: supabase,
+      employeeName: st.employee?.full_name || '',
+      showInfoModal,
+    });
+
+    console.log('[APP] vista de liquidación cargada OK');
+  } catch (e) {
+    console.error('[APP] error cargando vista de liquidación:', e);
+  }
+}
 
 // Verificar si ya existe una jornada hoy (OPEN o CLOSED)
 async function hasSessionToday() {
@@ -224,6 +290,7 @@ function routeTo(path) {
   history.replaceState({}, '', path);
   hide($('#authCard')); hide($('#resetCard')); hide($('#homeCard'));
   hide($('#punchCard')); hide($('#projectsCard')); hide($('#leaveCard')); hide($('#payslipsCard'));
+  hide($('#facturasLiquidacionCard'));
 
   if (path === '/' || path === '/login') show($('#authCard'));
   else if (path === '/reset') show($('#resetCard'));
@@ -232,6 +299,10 @@ function routeTo(path) {
   else if (path === '/proyectos') show($('#projectsCard'));
   else if (path === '/licencias') show($('#leaveCard'));
   else if (path === '/comprobantes') show($('#payslipsCard'));
+  else if (path === '/facturas-liquidacion') {
+    show($('#facturasLiquidacionCard'));
+    void renderFacturasLiquidacionView();
+  }
 
   // Si no estamos en /marcas, apagamos el ticker
   if (path !== '/marcas') stopSessionTicker();
@@ -474,6 +545,7 @@ async function loadEmployeeContext() {
   const u2 = $('#empUid2'); if (u2) u2.textContent = '';
 
   console.log('[APP] employee OK:', st.employee);
+  refreshSharedAppContext();
 }
 
 // === STATUS + RECIENTES ===
@@ -1211,6 +1283,7 @@ async function showAuthError(err, ctx = '') {
 async function boot() {
   console.log('[APP] BOOT start…');
 
+  refreshSharedAppContext();
   setNavListeners();
 
   const rawHash = (location.hash || '').replace(/^#/, '');

@@ -1,3 +1,4 @@
+// Ruta: index.html
 <!doctype html>
 <html lang="es">
 <head>
@@ -5,27 +6,33 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Portal del Empleado · Tecnomedica Montajes Industriales S.A.</title>
 
-  <!-- FAVICONS -->
+  <!-- //#1 favicons y meta base
+       define íconos, manifest y configuración general de la app -->
   <link rel="icon" href="/assets/icons/favicon.ico" type="image/x-icon">
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/favicon-96x96.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/web-app-manifest-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/icons/web-app-manifest-512x512.png">
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
 
-  <!-- PWA -->
+  <!-- //#2 configuración PWA
+       declara manifest y meta tags móviles -->
   <link rel="manifest" href="/assets/icons/site.webmanifest">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#1e88e5" />
 
-  <link rel="stylesheet" href="./assets/app.css?v=26" />
-  <!-- Supabase global (CDN) -->
+  <!-- //#3 estilos base y del módulo de liquidación
+       carga css general y css específico de facturas -->
+  <link rel="stylesheet" href="./assets/app.css?v=27" />
+  <link rel="stylesheet" href="./assets/facturas-liquidacion.css?v=01" />
+
+  <!-- //#4 supabase global
+       carga la librería de Supabase desde CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
+  <!-- //#5 override local del home
+       deja el home en formato de lista y adapta proporciones móviles -->
   <style>
-    /* =========================================================
-       OVERRIDE LOCAL SOLO PARA HOME EN FORMATO LISTA
-       ========================================================= */
     #homeCard{
       max-height: calc(100vh - 32px);
       overflow-y: auto;
@@ -156,8 +163,11 @@
   </style>
 </head>
 <body>
+  <!-- //#6 contenedor principal
+       envuelve todas las tarjetas/pantallas del portal -->
   <div class="app">
-    <!-- LOGIN -->
+    <!-- //#7 tarjeta de login
+         permite iniciar sesión con correo y contraseña -->
     <div class="card" id="authCard">
       <div class="brand-row">
         <img src="Logo.png" alt="Tecnomedica Montajes Industriales S.A.">
@@ -175,7 +185,8 @@
       <div id="msg" class="muted"></div>
     </div>
 
-    <!-- RESET PASSWORD -->
+    <!-- //#8 tarjeta de reset
+         permite definir una nueva contraseña cuando viene flujo recovery -->
     <div class="card" id="resetCard" style="display:none;">
       <div class="brand-row">
         <img src="Logo.png" alt="Tecnomedica Montajes Industriales S.A.">
@@ -191,7 +202,8 @@
       <div id="msg2" class="muted"></div>
     </div>
 
-    <!-- HOME -->
+    <!-- //#9 home principal
+         muestra bienvenida y lista de módulos disponibles -->
     <div class="card" id="homeCard" style="display:none;">
       <div class="topbar">
         <div class="brand-row no-gap">
@@ -227,41 +239,39 @@
           <div class="k">Proyectos</div>
           <div class="s">Crear y ver proyectos</div>
         </div>
+
+        <div class="tile listTile" data-nav="/facturas-liquidacion">
+          <div class="k">Liquidación de facturas</div>
+          <div class="s">Reclamar facturas pendientes</div>
+        </div>
       </div>
     </div>
 
-    <!-- MARCAS -->
+    <!-- //#10 tarjeta de marcas
+         mantiene toda la UI actual de entrada, salida y asignaciones -->
     <div class="card" id="punchCard" style="display:none; position:relative;">
-      <!-- Botones flotantes iguales -->
       <button class="btn floatBtn grey" id="btnMenu" data-nav="/app">← Menú</button>
       <button class="btn floatBtn red"  id="btnLogout2">Salir</button>
 
-      <!-- LOGO ARRIBA -->
       <div class="logoHero" id="logoHero">
         <img class="punchLogo" src="Logo.png" alt="Tecnomedica">
       </div>
 
-      <!-- El bloque “Estado actual / Horas de hoy” lo insertará el JS justo debajo de #logoHero -->
-
-      <!-- Identidad -->
       <div class="muted">Marcas IN/OUT como</div>
       <div id="empName2" class="big">—</div>
       <div id="empUid2" class="muted">—</div>
 
-      <!-- ENTRADA ancho completo -->
       <div class="m-t">
         <button class="btn btnFull" id="btnIn">Marcar ENTRADA</button>
       </div>
 
       <div id="punchMsg" class="muted m-t"></div>
 
-      <!-- Últimas marcas -->
       <div class="card inner">
         <div class="listTitle m-b-sm">Últimas marcas</div>
         <div id="recentPunches" class="punchList">—</div>
       </div>
 
-      <!-- ASIGNACIÓN DE PROYECTOS -->
       <div class="card inner">
         <div class="center m-b-sm">
           <div class="allocHeadTitle">Asignación de proyectos</div>
@@ -269,22 +279,17 @@
           <div class="allocHeadWarn" id="allocInfo">Debes asignar 00:00 más.</div>
         </div>
 
-        <!-- + Proyecto (mismo ancho que Guardar) -->
         <button class="btn block darker m-b" id="btnAddAlloc">+ Proyecto</button>
 
-        <!-- Cliente -->
         <label for="allocClient" class="muted">Cliente</label>
         <select id="allocClient">
           <option value="">— Todos los clientes —</option>
         </select>
 
-        <!-- Divisor elegante -->
         <hr class="dashDivider" />
 
-        <!-- Proyectos -->
         <div id="allocContainer" class="m-t"></div>
 
-        <!-- Totales + Guardar -->
         <div class="row between m-t">
           <div class="muted">
             <strong><span id="allocTotalHM">00:00</span> / <span id="allocRequiredHM">00:00</span></strong> asignados
@@ -293,31 +298,57 @@
         </div>
       </div>
 
-      <!-- SALIDA al final -->
       <div class="m-t">
         <button class="btn success btnFull" id="btnOut">Marcar SALIDA</button>
       </div>
+    </div>
 
-      <!-- Placeholders -->
-      <div class="card" id="projectsCard" style="display:none;">
-        <div class="topbar"><h1>Proyectos</h1><button class="btn light" data-nav="/app">← Menú</button></div>
-        <div class="muted">En construcción. Activaremos pivot <code>employee_projects</code> y RLS.</div>
+    <!-- //#11 tarjeta de liquidación de facturas
+         aloja la vista móvil de facturas pendientes por reclamar -->
+    <div class="card" id="facturasLiquidacionCard" style="display:none;">
+      <div class="facturasLiqHeader">
+        <div class="brand-row facturasLiqBrand">
+          <img src="Logo.png" alt="Tecnomedica Montajes Industriales S.A.">
+          <div class="title">Tecnomedica Montajes Industriales S.A.</div>
+        </div>
+        <button class="btn light" data-nav="/app">← Menú</button>
       </div>
-      <div class="card" id="leaveCard" style="display:none;">
-        <div class="topbar"><h1>Licencias</h1><button class="btn light" data-nav="/app">← Menú</button></div>
-        <div class="muted">En construcción. Usaremos <code>employee_leaves</code> con RLS.</div>
+
+      <div class="facturasLiqIntro">
+        <h2 class="facturasLiqTitle">Liquidación de facturas</h2>
+        <p class="facturasLiqText">
+          Selecciona una factura pendiente para reclamarla.
+        </p>
       </div>
-      <div class="card" id="payslipsCard" style="display:none;">
-        <div class="topbar"><h1>Comprobantes</h1><button class="btn light" data-nav="/app">← Menú</button></div>
-        <div class="muted">En construcción. Bucket privado <code>payslips</code> + signed URLs.</div>
-      </div>
+
+      <div id="facturasLiquidacionEstado" class="muted m-b"></div>
+      <div id="facturasLiquidacionList" class="facturasLiqList"></div>
+    </div>
+
+    <!-- //#12 placeholders existentes
+         mantiene tarjetas temporales para módulos no implementados -->
+    <div class="card" id="projectsCard" style="display:none;">
+      <div class="topbar"><h1>Proyectos</h1><button class="btn light" data-nav="/app">← Menú</button></div>
+      <div class="muted">En construcción. Activaremos pivot <code>employee_projects</code> y RLS.</div>
+    </div>
+
+    <div class="card" id="leaveCard" style="display:none;">
+      <div class="topbar"><h1>Licencias</h1><button class="btn light" data-nav="/app">← Menú</button></div>
+      <div class="muted">En construcción. Usaremos <code>employee_leaves</code> con RLS.</div>
+    </div>
+
+    <div class="card" id="payslipsCard" style="display:none;">
+      <div class="topbar"><h1>Comprobantes</h1><button class="btn light" data-nav="/app">← Menú</button></div>
+      <div class="muted">En construcción. Bucket privado <code>payslips</code> + signed URLs.</div>
     </div>
   </div>
 
-  <!-- App (con cache-bust) -->
-  <script type="module" src="./assets/app.js?v=26"></script>
+  <!-- //#13 script principal
+       carga app.js como módulo -->
+  <script type="module" src="./assets/app.js?v=27"></script>
 
-  <!-- Service Worker Registration -->
+  <!-- //#14 registro de service worker
+       intenta registrar el service worker de la app -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

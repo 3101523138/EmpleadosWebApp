@@ -1,0 +1,190 @@
+/* Ruta: assets/facturas-liquidacion.css */
+
+/* //#1 contenedor general del header
+   alinea marca y botón regresar */
+.facturasLiqHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:14px;
+}
+
+/* //#2 bloque de marca de liquidación
+   permite que logo y nombre se acomoden bien */
+.facturasLiqBrand{
+  flex:1;
+  min-width:0;
+  margin-bottom:0;
+}
+
+/* //#3 intro del módulo
+   define separación del título y texto corto */
+.facturasLiqIntro{
+  margin-bottom:12px;
+}
+
+/* //#4 título principal
+   resalta el nombre de la sección */
+.facturasLiqTitle{
+  margin:0 0 6px;
+  font-size: clamp(22px, 5.8vw, 30px);
+  color:#111827;
+}
+
+/* //#5 texto introductorio
+   explica muy brevemente qué hace la página */
+.facturasLiqText{
+  margin:0;
+  color:#6b7280;
+  font-size:14px;
+  line-height:1.35;
+}
+
+/* //#6 lista vertical
+   organiza las tarjetas una debajo de otra */
+.facturasLiqList{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+/* //#7 tarjeta individual
+   define apariencia principal de cada factura */
+.facturasLiqCard{
+  background:#ffffff;
+  border:1px solid #d9dde5;
+  border-radius:22px;
+  padding:18px 18px 16px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+}
+
+/* //#8 encabezado de tarjeta
+   distribuye documento y fecha */
+.facturasLiqCardHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:10px;
+}
+
+/* //#9 documento principal
+   muestra el documento con mayor peso visual */
+.facturasLiqDoc{
+  font-size:18px;
+  font-weight:800;
+  color:#111827;
+  line-height:1.15;
+}
+
+/* //#10 fecha de la factura
+   muestra la fecha con un estilo secundario */
+.facturasLiqFecha{
+  flex-shrink:0;
+  font-size:13px;
+  color:#6b7280;
+  font-weight:600;
+}
+
+/* //#11 proveedor
+   presenta el proveedor debajo del encabezado */
+.facturasLiqProveedor{
+  font-size:15px;
+  color:#374151;
+  margin-bottom:12px;
+  line-height:1.25;
+}
+
+/* //#12 fila de monto
+   separa etiqueta y monto total */
+.facturasLiqMontoRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+/* //#13 etiqueta de monto
+   texto pequeño descriptivo */
+.facturasLiqMontoLabel{
+  font-size:13px;
+  color:#6b7280;
+}
+
+/* //#14 valor de monto
+   resalta el importe principal */
+.facturasLiqMontoValue{
+  font-size:18px;
+  color:#111827;
+}
+
+/* //#15 botón reclamar
+   adapta el botón al ancho y tono del módulo */
+.facturasLiqBtn{
+  width:100%;
+  border-radius:16px;
+  font-size:16px;
+  padding:14px 18px;
+}
+
+/* //#16 estado vacío
+   bloque simple cuando no hay facturas */
+.facturasLiqEmpty{
+  border:1px dashed #cfd6df;
+  border-radius:18px;
+  background:#fafbfc;
+  padding:20px 16px;
+  color:#6b7280;
+  text-align:center;
+  font-size:14px;
+}
+
+/* //#17 estado de error
+   mensaje visible cuando falla la consulta */
+.facturasLiqError{
+  border:1px solid #fecaca;
+  border-radius:18px;
+  background:#fef2f2;
+  padding:20px 16px;
+  color:#b91c1c;
+  text-align:center;
+  font-size:14px;
+}
+
+/* //#18 skeleton de carga
+   simula tarjetas mientras se consultan datos */
+.facturasLiqSkeleton{
+  height:138px;
+  border-radius:22px;
+  background:linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size:200% 100%;
+  animation: facturasLiqShimmer 1.2s infinite linear;
+  border:1px solid #e5e7eb;
+}
+
+/* //#19 animación shimmer
+   da movimiento al skeleton de carga */
+@keyframes facturasLiqShimmer{
+  0%{ background-position:200% 0; }
+  100%{ background-position:-200% 0; }
+}
+
+/* //#20 responsive móvil
+   compacta mejor el header y la tarjeta en pantallas pequeñas */
+@media (max-width: 640px){
+  .facturasLiqHeader{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .facturasLiqCardHead{
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .facturasLiqFecha{
+    align-self:flex-start;
+  }
+}
