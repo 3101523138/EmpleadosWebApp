@@ -28,8 +28,10 @@
    resalta el nombre de la sección */
 .facturasLiqTitle{
   margin:0 0 6px;
-  font-size: clamp(22px, 5.8vw, 30px);
+  font-size:clamp(22px, 5.8vw, 30px);
   color:#111827;
+  line-height:1.08;
+  font-weight:800;
 }
 
 /* //#5 texto introductorio
@@ -57,6 +59,8 @@
   border-radius:22px;
   padding:18px 18px 16px;
   box-shadow:0 8px 24px rgba(15,23,42,.06);
+  box-sizing:border-box;
+  width:100%;
 }
 
 /* //#8 encabezado de tarjeta
@@ -72,10 +76,14 @@
 /* //#9 documento principal
    muestra el documento con mayor peso visual */
 .facturasLiqDoc{
+  min-width:0;
+  flex:1 1 auto;
   font-size:18px;
   font-weight:800;
   color:#111827;
   line-height:1.15;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
 /* //#10 fecha de la factura
@@ -85,6 +93,7 @@
   font-size:13px;
   color:#6b7280;
   font-weight:600;
+  white-space:nowrap;
 }
 
 /* //#11 proveedor
@@ -94,6 +103,8 @@
   color:#374151;
   margin-bottom:12px;
   line-height:1.25;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
 /* //#12 fila de monto
@@ -118,6 +129,8 @@
 .facturasLiqMontoValue{
   font-size:18px;
   color:#111827;
+  font-weight:800;
+  text-align:right;
 }
 
 /* //#15 botón reclamar
@@ -127,6 +140,7 @@
   border-radius:16px;
   font-size:16px;
   padding:14px 18px;
+  box-sizing:border-box;
 }
 
 /* //#16 estado vacío
@@ -139,6 +153,7 @@
   color:#6b7280;
   text-align:center;
   font-size:14px;
+  box-sizing:border-box;
 }
 
 /* //#17 estado de error
@@ -151,6 +166,7 @@
   color:#b91c1c;
   text-align:center;
   font-size:14px;
+  box-sizing:border-box;
 }
 
 /* //#18 skeleton de carga
@@ -160,8 +176,9 @@
   border-radius:22px;
   background:linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
   background-size:200% 100%;
-  animation: facturasLiqShimmer 1.2s infinite linear;
+  animation:facturasLiqShimmer 1.2s infinite linear;
   border:1px solid #e5e7eb;
+  box-sizing:border-box;
 }
 
 /* //#19 animación shimmer
@@ -171,12 +188,33 @@
   100%{ background-position:-200% 0; }
 }
 
-/* //#20 responsive móvil
+/* //#20 responsive tablet
+   mejora el acomodo antes de llegar a móvil */
+@media (max-width: 900px){
+  .facturasLiqCard{
+    padding:16px 16px 15px;
+  }
+
+  .facturasLiqDoc{
+    font-size:17px;
+  }
+
+  .facturasLiqMontoValue{
+    font-size:17px;
+  }
+}
+
+/* //#21 responsive móvil
    compacta mejor el header y la tarjeta en pantallas pequeñas */
 @media (max-width: 640px){
   .facturasLiqHeader{
     flex-direction:column;
     align-items:stretch;
+  }
+
+  .facturasLiqCard{
+    border-radius:18px;
+    padding:15px 14px 14px;
   }
 
   .facturasLiqCardHead{
@@ -186,5 +224,33 @@
 
   .facturasLiqFecha{
     align-self:flex-start;
+    white-space:normal;
+  }
+
+  .facturasLiqDoc{
+    font-size:17px;
+    line-height:1.14;
+  }
+
+  .facturasLiqProveedor{
+    font-size:14px;
+    margin-bottom:10px;
+  }
+
+  .facturasLiqMontoRow{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .facturasLiqMontoValue{
+    text-align:left;
+    font-size:17px;
+  }
+
+  .facturasLiqBtn{
+    font-size:15px;
+    padding:13px 16px;
+    border-radius:14px;
   }
 }

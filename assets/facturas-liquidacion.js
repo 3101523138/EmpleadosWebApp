@@ -1,23 +1,26 @@
 // Ruta: assets/facturas-liquidacion.js
 
-//#1 constantes del módulo
-// define tamaños, estados, URL del formulario y selectores usados por la vista
+//#1 import del modal de liquidación
+// mueve la lógica pesada del modal interno a un archivo aparte
+import { createFacturasLiquidacionModalController } from './facturas-liquidacion-modal.js';
+
+//#2 constantes del módulo
+// define tamaños, estados e ids usados por la vista principal
 const MAX_FACTURAS_PENDIENTES = 50;
 const LIQ_STATUS_PENDIENTE = "pendiente";
 const LIQ_STATUS_RECLAMADA = "reclamada";
-const FORMULARIO_LIQUIDACION_URL = "https://tmiproveedores.netlify.app/facturas/liquidacion";
 const FLOATING_WRAP_ID = "facturasLiqFloatingActions";
 const PDF_MODAL_ID = "facturasLiqPdfModal";
 const VISIBILITY_OBSERVER_ID = "__facturasLiqVisibilityObserver";
 
-//#2 estado interno del módulo
-// controla la vista activa entre pendientes y reclamadas del usuario logueado
+//#3 estado interno del módulo
+// controla la vista activa y la carga principal del listado
 const moduleState = {
   currentView: "pendientes", // "pendientes" | "mias"
   isLoading: false,
 };
 
-//#3 utilidades numéricas
+//#4 utilidades numéricas
 // convierte valores a número seguro y evita NaN
 function toNumberSafe(value) {
   if (value === null || value === undefined || value === "") return 0;
@@ -25,7 +28,7 @@ function toNumberSafe(value) {
   return Number.isNaN(n) ? 0 : n;
 }
 
-//#4 utilidad de moneda
+//#5 utilidad de moneda
 // formatea el monto según la moneda de la factura
 function formatMoney(currency, amount) {
   const code = String(currency || "").trim().toUpperCase();
@@ -48,7 +51,7 @@ function formatMoney(currency, amount) {
   }).format(value);
 }
 
-//#5 utilidad de fecha
+//#6 utilidad de fecha
 // convierte issue_date a una fecha legible en español
 function formatIssueDate(dateValue) {
   const raw = String(dateValue || "").trim();
@@ -64,7 +67,7 @@ function formatIssueDate(dateValue) {
   });
 }
 
-//#6 utilidad de documento
+//#7 utilidad de documento
 // arma el texto principal de documento usando número y tipo
 function formatDocumentLabel(factura) {
   const numero = String(factura?.document_number || "").trim();
@@ -74,14 +77,14 @@ function formatDocumentLabel(factura) {
   return numero || tipo || "Sin documento";
 }
 
-//#7 utilidad de proveedor
+//#8 utilidad de proveedor
 // devuelve un nombre amigable del proveedor
 function formatSupplierLabel(factura) {
   const proveedor = String(factura?.supplier_name || "").trim();
   return proveedor || "Proveedor no disponible";
 }
 
-//#8 utilidad de monto
+//#9 utilidad de monto
 // determina qué monto mostrar en la tarjeta según la moneda
 function resolveDisplayAmount(factura) {
   const currency = String(factura?.currency_code || "").trim().toUpperCase();
@@ -99,13 +102,13 @@ function resolveDisplayAmount(factura) {
   };
 }
 
-//#9 utilidad de normalización de texto
+//#10 utilidad de normalización de texto
 // normaliza valores para comparar estados y cadenas de manera segura
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-//#10 utilidad nombre empleado actual
+//#11 utilidad nombre empleado actual
 // obtiene el nombre exacto del usuario logueado desde el contexto compartido
 function getLoggedEmployeeName() {
   return String(
@@ -113,7 +116,58 @@ function getLoggedEmployeeName() {
   ).trim();
 }
 
-//#11 utilidad de estado visual
+//#12 utilidad supabase actual
+// devuelve el cliente supabase desde el contexto compartido
+function getSupabaseClient() {
+  return window.__TMI_APP_CONTEXT__?.supabase || null;
+}
+
+//#13 utilidad proyecto texto
+// arma el texto amigable de proyecto para inputs y vistas
+function buildProjectText(project) {
+  if (!project) return "";
+  const code = String(project.project_code || "").trim();
+  const name = String(project.name || project.project_name || "").trim();
+  return [code, name].filter(Boolean).join(" · ");
+}
+
+//#14 utilidad resolver nombre tercero
+// toma el mejor nombre visible del tercero SICLA
+function resolveThirdPartyName(item) {
+  if (!item || typeof item !== "object") return "";
+
+  const candidates = [
+    item.third_party_name,
+    item.alias_name,
+    item.name,
+    item.legal_name,
+    item.business_name,
+    item.company_name,
+    item.nombre,
+    item.descripcion,
+  ];
+
+  for (const value of candidates) {
+    const text = String(value || "").trim();
+    if (text) return text;
+  }
+
+  return "";
+}
+
+//#15 utilidad proyecto disponible
+// excluye proyectos cerrados o anulados
+function isSiclaProjectAvailable(item) {
+  const estado = String(item?.project_status || "").trim().toLowerCase();
+
+  if (!estado) return true;
+  if (estado.includes("cerrad")) return false;
+  if (estado.includes("cancel")) return false;
+  if (estado.includes("anulad")) return false;
+  return true;
+}
+
+//#16 utilidad de estado visual
 // resuelve el texto y estilo del estado para mostrar en la tarjeta
 function resolveEstadoVisual(factura) {
   const estado = normalizeText(factura?.liq_status);
@@ -158,7 +212,7 @@ function resolveEstadoVisual(factura) {
   };
 }
 
-//#12 utilidad de PDF
+//#17 utilidad de PDF
 // resuelve la mejor información disponible para abrir el PDF
 function resolvePdfInfo(factura) {
   const googleDriveUrl = String(factura?.google_drive_url || "").trim();
@@ -173,7 +227,7 @@ function resolvePdfInfo(factura) {
   };
 }
 
-//#13 utilidad URL preview de PDF
+//#18 utilidad URL preview de PDF
 // genera la URL más adecuada para vista previa dentro del portal
 function buildPdfPreviewUrl(factura) {
   const pdfInfo = resolvePdfInfo(factura);
@@ -193,25 +247,7 @@ function buildPdfPreviewUrl(factura) {
   return "";
 }
 
-//#14 utilidad abrir formulario de liquidación
-// abre el formulario externo en modo normal o edición según corresponda
-function abrirFormularioLiquidacion(factura) {
-  const id = String(factura?.id || "").trim();
-  if (!id) return;
-
-  const estadoVisual = resolveEstadoVisual(factura);
-  const url = new URL(FORMULARIO_LIQUIDACION_URL);
-  url.searchParams.set("id", id);
-
-  if (estadoVisual.mode === "edit") {
-    url.searchParams.set("mode", "edit");
-  }
-
-  console.log("[FACTURAS-LIQ] abriendo formulario:", url.toString());
-  window.open(url.toString(), "_blank");
-}
-
-//#15 utilidad de visibilidad del módulo
+//#19 utilidad visibilidad del módulo
 // determina si la tarjeta de liquidación está realmente visible en pantalla
 function isLiquidacionModuleVisible() {
   const card = document.getElementById("facturasLiquidacionCard");
@@ -229,8 +265,73 @@ function isLiquidacionModuleVisible() {
   return true;
 }
 
-//#16 sincronización de botones flotantes
-// muestra u oculta los botones flotantes y cierra el modal PDF si la vista deja de estar activa
+//#20 escapar html
+// protege inserciones simples en atributos/textos
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+//#21 mapeo de errores humanos
+// convierte errores técnicos a lenguaje entendible
+function mapHumanLiquidacionError(error) {
+  const raw =
+    String(error?.message || error?.details || error?.hint || "").trim() ||
+    "No se pudo completar la operación.";
+
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("row-level security")) {
+    return "No tienes permisos para consultar o actualizar esta factura.";
+  }
+
+  if (lower.includes("violates check constraint")) {
+    return "Alguno de los valores enviados no es válido para este formulario.";
+  }
+
+  if (lower.includes("invalid input syntax")) {
+    return "Se envió un dato con formato incorrecto.";
+  }
+
+  if (lower.includes("network") || lower.includes("fetch")) {
+    return "Hubo un problema de conexión. Intenta nuevamente.";
+  }
+
+  if (lower.includes("not exist")) {
+    return "La factura o alguno de los datos requeridos ya no está disponible.";
+  }
+
+  return raw;
+}
+
+//#22 controlador externo del modal
+// delega toda la lógica pesada del modal al archivo segregado
+const liquidacionModalController = createFacturasLiquidacionModalController({
+  getSupabaseClient,
+  getLoggedEmployeeName,
+  formatMoney,
+  formatIssueDate,
+  formatDocumentLabel,
+  formatSupplierLabel,
+  resolveDisplayAmount,
+  resolvePdfInfo,
+  buildProjectText,
+  normalizeText,
+  resolveThirdPartyName,
+  isSiclaProjectAvailable,
+  openPdfModal,
+  onAfterSave: async () => {
+    await reloadCurrentView();
+  },
+  mapHumanLiquidacionError,
+});
+
+//#23 sincronización de botones flotantes
+// muestra u oculta los botones flotantes y cierra modales si la vista deja de estar activa
 function syncFloatingActionsVisibility() {
   const wrap = document.getElementById(FLOATING_WRAP_ID);
   if (!wrap) return;
@@ -240,12 +341,13 @@ function syncFloatingActionsVisibility() {
 
   if (!visible) {
     closePdfModal();
+    liquidacionModalController.close();
   }
 
   syncToggleButtonLabel();
 }
 
-//#17 sincronización del botón de alternancia
+//#24 sincronización del botón de alternancia
 // actualiza el texto del botón flotante según la vista activa
 function syncToggleButtonLabel() {
   const btn = document.getElementById("facturasLiqToggleViewBtn");
@@ -255,11 +357,11 @@ function syncToggleButtonLabel() {
     moduleState.currentView === "mias" ? "Ver pendientes" : "Mis reclamadas";
 }
 
-//#18 cambio de vista
+//#25 cambio de vista
 // alterna entre pendientes y reclamadas del usuario actual y recarga la lista
 function toggleCurrentView() {
-  if (moduleState.isLoading) {
-    console.log("[FACTURAS-LIQ] toggle bloqueado porque hay carga en progreso");
+  if (moduleState.isLoading || liquidacionModalController.isSaving()) {
+    console.log("[FACTURAS-LIQ] toggle bloqueado por carga/guardado");
     return;
   }
 
@@ -272,10 +374,10 @@ function toggleCurrentView() {
   void reloadCurrentView();
 }
 
-//#19 recarga de la vista actual
+//#26 recarga de la vista actual
 // vuelve a cargar la lista usando la vista activa del módulo
 async function reloadCurrentView() {
-  const supabaseClient = window.__TMI_APP_CONTEXT__?.supabase || null;
+  const supabaseClient = getSupabaseClient();
   if (!supabaseClient) {
     console.warn("[FACTURAS-LIQ] no hay supabase en contexto para recargar vista");
     return;
@@ -286,7 +388,7 @@ async function reloadCurrentView() {
   });
 }
 
-//#20 render de estado superior
+//#27 render de estado superior
 // escribe mensajes superiores en el contenedor de estado
 function setEstadoMessage(text) {
   const el = document.getElementById("facturasLiquidacionEstado");
@@ -294,7 +396,7 @@ function setEstadoMessage(text) {
   el.textContent = text || "";
 }
 
-//#21 render de lista vacía
+//#28 render de lista vacía
 // muestra mensaje cuando no hay facturas según la vista activa
 function renderEmptyState() {
   const list = document.getElementById("facturasLiquidacionList");
@@ -312,7 +414,7 @@ function renderEmptyState() {
   `;
 }
 
-//#22 render de carga
+//#29 render de carga
 // muestra tarjetas esqueletales mientras la vista carga datos
 function renderLoadingState() {
   const list = document.getElementById("facturasLiquidacionList");
@@ -325,7 +427,7 @@ function renderLoadingState() {
   `;
 }
 
-//#23 render de error
+//#30 render de error
 // muestra mensaje de error si la consulta falla
 function renderErrorState(message) {
   const list = document.getElementById("facturasLiquidacionList");
@@ -338,8 +440,8 @@ function renderErrorState(message) {
   `;
 }
 
-//#24 estilos locales del módulo
-// inyecta estilos del módulo, acciones, modal PDF y botones flotantes
+//#31 estilos locales del módulo principal
+// inyecta estilos del listado, botones flotantes y visor PDF
 function ensureFacturasLiquidacionStyles() {
   if (document.getElementById("facturas-liquidacion-inline-styles")) return;
 
@@ -682,7 +784,7 @@ function ensureFacturasLiquidacionStyles() {
   document.head.appendChild(style);
 }
 
-//#25 botones flotantes del módulo
+//#32 botones flotantes del módulo
 // crea botones flotantes de menú, salir y alternancia de vista visibles solo cuando la vista está activa
 function ensureFloatingActions() {
   ensureFacturasLiquidacionStyles();
@@ -741,7 +843,7 @@ function ensureFloatingActions() {
   syncFloatingActionsVisibility();
 }
 
-//#26 observer de visibilidad
+//#33 observer de visibilidad
 // observa cambios mínimos de visibilidad para ocultar los botones al salir del módulo
 function ensureVisibilityObserver() {
   if (window[VISIBILITY_OBSERVER_ID]) return;
@@ -768,7 +870,7 @@ function ensureVisibilityObserver() {
   syncFloatingActionsVisibility();
 }
 
-//#27 modal PDF
+//#34 modal PDF
 // crea una sola vez el visor modal de PDF dentro del portal
 function ensurePdfModal() {
   ensureFacturasLiquidacionStyles();
@@ -829,7 +931,7 @@ function ensurePdfModal() {
   return modal;
 }
 
-//#28 abrir visor PDF
+//#35 abrir visor PDF
 // abre el PDF en un modal dentro del portal usando preview de Drive si es posible
 function openPdfModal(factura) {
   const modal = ensurePdfModal();
@@ -873,7 +975,7 @@ function openPdfModal(factura) {
   });
 }
 
-//#29 cerrar visor PDF
+//#36 cerrar visor PDF
 // cierra el modal PDF y limpia el iframe para detener la carga
 function closePdfModal() {
   const modal = document.getElementById(PDF_MODAL_ID);
@@ -892,10 +994,16 @@ function closePdfModal() {
   }
 
   modal.style.display = "none";
-  document.body.style.overflow = "";
+  document.body.style.overflow = liquidacionModalController.isOpen() ? "hidden" : "";
 }
 
-//#30 creación de tarjeta para pendientes
+//#37 apertura de liquidación
+// reemplaza la URL externa por el modal interno segregado
+function abrirFormularioLiquidacion(factura) {
+  void liquidacionModalController.open(factura);
+}
+
+//#38 creación de tarjeta para pendientes
 // construye una tarjeta completa con datos, estado, PDF y botón de liquidar
 function createPendienteCard(factura) {
   const wrapper = document.createElement("div");
@@ -908,23 +1016,23 @@ function createPendienteCard(factura) {
 
   wrapper.innerHTML = `
     <div class="facturasLiqCardHead">
-      <div class="facturasLiqDoc" title="${formatDocumentLabel(factura)}">${formatDocumentLabel(factura)}</div>
-      <div class="facturasLiqFecha">${formatIssueDate(factura?.issue_date)}</div>
+      <div class="facturasLiqDoc" title="${escapeHtml(formatDocumentLabel(factura))}">${escapeHtml(formatDocumentLabel(factura))}</div>
+      <div class="facturasLiqFecha">${escapeHtml(formatIssueDate(factura?.issue_date))}</div>
     </div>
 
-    <div class="facturasLiqProveedor">${formatSupplierLabel(factura)}</div>
+    <div class="facturasLiqProveedor">${escapeHtml(formatSupplierLabel(factura))}</div>
 
     <div class="facturasLiqMontoRow">
       <span class="facturasLiqMontoLabel">Monto</span>
-      <strong class="facturasLiqMontoValue">${montoTexto}</strong>
+      <strong class="facturasLiqMontoValue">${escapeHtml(montoTexto)}</strong>
     </div>
 
     <div class="facturasLiqEstado ${estadoVisual.className}">
-      ${estadoVisual.label}
+      ${escapeHtml(estadoVisual.label)}
     </div>
 
     <div class="facturasLiqActions">
-      <button class="btn facturasLiqBtn ${estadoVisual.buttonClassName || ""}" type="button">${estadoVisual.button}</button>
+      <button class="btn facturasLiqBtn ${estadoVisual.buttonClassName || ""}" type="button">${escapeHtml(estadoVisual.button)}</button>
       ${
         pdfInfo.hasPdf
           ? `
@@ -953,7 +1061,7 @@ function createPendienteCard(factura) {
   return wrapper;
 }
 
-//#31 creación de tarjeta para reclamadas mías
+//#39 creación de tarjeta para reclamadas mías
 // construye una tarjeta compacta con documento y botón de edición
 function createReclamadaMiaCard(factura) {
   const wrapper = document.createElement("div");
@@ -961,8 +1069,8 @@ function createReclamadaMiaCard(factura) {
 
   wrapper.innerHTML = `
     <div class="facturasLiqCardHead">
-      <div class="facturasLiqDoc" title="${formatDocumentLabel(factura)}">${formatDocumentLabel(factura)}</div>
-      <div class="facturasLiqFecha">${formatIssueDate(factura?.issue_date)}</div>
+      <div class="facturasLiqDoc" title="${escapeHtml(formatDocumentLabel(factura))}">${escapeHtml(formatDocumentLabel(factura))}</div>
+      <div class="facturasLiqFecha">${escapeHtml(formatIssueDate(factura?.issue_date))}</div>
     </div>
 
     <div class="facturasLiqActions">
@@ -978,7 +1086,7 @@ function createReclamadaMiaCard(factura) {
   return wrapper;
 }
 
-//#32 creación de tarjeta según vista
+//#40 creación de tarjeta según vista
 // selecciona el formato correcto de tarjeta dependiendo de la vista activa
 function createFacturaCard({ factura }) {
   if (moduleState.currentView === "mias") {
@@ -988,7 +1096,7 @@ function createFacturaCard({ factura }) {
   return createPendienteCard(factura);
 }
 
-//#33 render principal de facturas
+//#41 render principal de facturas
 // dibuja toda la lista según la vista activa
 function renderFacturasList({ facturas }) {
   const list = document.getElementById("facturasLiquidacionList");
@@ -1011,7 +1119,7 @@ function renderFacturasList({ facturas }) {
   list.appendChild(frag);
 }
 
-//#34 consulta de pendientes
+//#42 consulta de pendientes
 // consulta directamente a la BD solo las facturas pendientes visibles
 async function fetchPendientesDirecto(supabaseClient) {
   console.log("[FACTURAS-LIQ] consultando pendientes directo...");
@@ -1033,6 +1141,12 @@ async function fetchPendientesDirecto(supabaseClient) {
       google_drive_url,
       google_drive_file_id,
       pdf_file_name,
+      client_name,
+      project_code,
+      project_name,
+      capa,
+      liq_type,
+      liq_comments,
       created_at
     `)
     .or("liq_status.is.null,liq_status.eq.,liq_status.ilike.pendiente")
@@ -1052,7 +1166,7 @@ async function fetchPendientesDirecto(supabaseClient) {
   return facturas;
 }
 
-//#35 consulta de reclamadas del usuario
+//#43 consulta de reclamadas del usuario
 // consulta directamente a la BD solo las facturas reclamadas por el usuario logueado
 async function fetchReclamadasMiasDirecto(supabaseClient, employeeName) {
   console.log("[FACTURAS-LIQ] consultando reclamadas del usuario:", employeeName);
@@ -1078,6 +1192,12 @@ async function fetchReclamadasMiasDirecto(supabaseClient, employeeName) {
       google_drive_url,
       google_drive_file_id,
       pdf_file_name,
+      client_name,
+      project_code,
+      project_name,
+      capa,
+      liq_type,
+      liq_comments,
       created_at
     `)
     .ilike("liq_status", "Reclamada")
@@ -1097,7 +1217,7 @@ async function fetchReclamadasMiasDirecto(supabaseClient, employeeName) {
   return facturas;
 }
 
-//#36 mensaje superior según vista
+//#44 mensaje superior según vista
 // construye el texto del encabezado para pendientes o reclamadas del usuario
 function buildHeaderMessage(total, employeeName) {
   if (moduleState.currentView === "mias") {
@@ -1109,8 +1229,8 @@ function buildHeaderMessage(total, employeeName) {
   return `Mostrando ${total} factura(s) pendiente(s).`;
 }
 
-//#37 inicialización del módulo
-// valida presencia del DOM, inyecta estilos y deja listos los botones flotantes y el modal PDF
+//#45 inicialización del módulo
+// valida presencia del DOM, inyecta estilos y deja listos los botones flotantes y modales
 export function initFacturasLiquidacionModule() {
   console.log("[FACTURAS-LIQ] initFacturasLiquidacionModule");
 
@@ -1127,12 +1247,13 @@ export function initFacturasLiquidacionModule() {
   ensureFloatingActions();
   ensureVisibilityObserver();
   ensurePdfModal();
+  liquidacionModalController.ensure();
   syncFloatingActionsVisibility();
 
   return true;
 }
 
-//#38 carga principal de la vista
+//#46 carga principal de la vista
 // consulta directo a la BD según la vista activa y renderiza la lista
 export async function loadFacturasLiquidacionView({
   supabaseClient,

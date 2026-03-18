@@ -1,0 +1,404 @@
+/* Ruta: assets/facturas-liquidacion-modal.css */
+
+/* //#1 backdrop del modal
+   cubre toda la pantalla con fondo oscuro */
+.facturasLiqEditModalBack{
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  z-index: 2300;
+  box-sizing: border-box;
+}
+
+/* //#2 contenedor principal del modal
+   define tamaño, borde y comportamiento general */
+.facturasLiqEditModal{
+  width: min(940px, 100%);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 20px 54px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* //#3 cabecera fija
+   mantiene título y botón de cierre visibles */
+.facturasLiqEditHead{
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #eef2f7;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.facturasLiqEditHeadText{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.facturasLiqEditHeadText h3{
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.facturasLiqEditDoc{
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.1;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+/* //#4 cuerpo scrolleable
+   contiene todas las secciones del formulario */
+.facturasLiqEditBody{
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  background: linear-gradient(180deg, rgba(248,250,252,.98), rgba(241,245,249,.94));
+  box-sizing: border-box;
+}
+
+/* //#5 secciones del modal
+   cada bloque interno tiene apariencia tipo tarjeta */
+.facturasLiqEditSection{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96));
+  box-shadow: 0 6px 18px rgba(15,23,42,.04);
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.facturasLiqEditSectionHead{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.facturasLiqEditSectionHead h4{
+  margin: 0;
+  font-size: .9rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.facturasLiqEditHint{
+  font-size: .74rem;
+  color: #64748b;
+  line-height: 1.1;
+}
+
+/* //#6 bloque superior resumen */
+.facturasLiqEditTop{
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 128px;
+  gap: 10px;
+  align-items: center;
+}
+
+.facturasLiqEditDocBox{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  border: 1px solid #e5e7eb;
+}
+
+.facturasLiqEditLabel{
+  font-size: .70rem;
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.facturasLiqEditDocValue{
+  font-size: .96rem;
+  line-height: 1.12;
+  color: #0f172a;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* //#7 grids informativos */
+.facturasLiqEditInfoGrid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 8px;
+}
+
+.facturasLiqEditInfoGridThree{
+  display: grid;
+  grid-template-columns: 1fr 1.35fr .8fr;
+  gap: 8px;
+}
+
+.facturasLiqEditInfoPill{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: rgba(255,255,255,.9);
+  box-sizing: border-box;
+}
+
+.facturasLiqEditInfoPill strong{
+  font-size: .8rem;
+  color: #0f172a;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+/* //#8 proyecto actual */
+.facturasLiqEditProjectInline{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.facturasLiqEditProjectCode{
+  flex: 0 0 auto;
+  font-size: .77rem;
+  font-weight: 800;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+.facturasLiqEditProjectName{
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.facturasLiqEditProjectStatus{
+  flex: 0 0 auto;
+  font-size: .72rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* //#9 grids de formulario */
+.facturasLiqEditGridTwo{
+  display: grid;
+  grid-template-columns: 1fr 1.28fr;
+  gap: 10px;
+}
+
+.facturasLiqEditGridThree{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+
+.facturasLiqField{
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.facturasLiqFieldLabel{
+  font-size: .76rem;
+  color: #475569;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+/* //#10 inputs */
+.facturasLiqInput,
+.facturasLiqSelect,
+.facturasLiqTextarea{
+  width: 100%;
+  min-height: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid #cfd8e3;
+  background: #ffffff;
+  padding: 0 11px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: #111827;
+  outline: none;
+  transition: .18s ease;
+  box-shadow: 0 1px 0 rgba(255,255,255,.8) inset;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* //#11 botones */
+.facturasLiqModalBtn{
+  width: 100%;
+  min-height: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.facturasLiqModalBtnBlue{
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  color: #ffffff;
+}
+
+.facturasLiqModalBtnDark{
+  background: linear-gradient(180deg, #1f2937, #000000);
+  color: #ffffff;
+}
+
+.facturasLiqModalBtnLight,
+.facturasLiqModalCloseBtn{
+  background: linear-gradient(180deg, #f8fafc, #eef2f7);
+  color: #334155;
+  border: 1px solid #cfd8e3;
+}
+
+.facturasLiqModalCloseBtn{
+  min-height: 32px;
+  height: 32px;
+  min-width: 110px;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+/* //#12 footer */
+.facturasLiqEditFooter{
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+}
+
+.facturasLiqEditFooterRight{
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* //#13 responsive tablet */
+@media (max-width: 900px) {
+
+  .facturasLiqEditInfoGrid,
+  .facturasLiqEditInfoGridThree,
+  .facturasLiqEditGridTwo,
+  .facturasLiqEditGridThree{
+    grid-template-columns: 1fr;
+  }
+
+  .facturasLiqEditProjectInline{
+    flex-wrap: wrap;
+  }
+
+}
+
+/* //#14 responsive móvil */
+@media (max-width: 640px) {
+
+  .facturasLiqEditModal{
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 14px;
+  }
+
+  /* header vertical */
+  .facturasLiqEditHead{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .facturasLiqEditHeadText{
+    width: 100%;
+  }
+
+  .facturasLiqModalCloseBtn{
+    width: 100%;
+    min-width: 0;
+  }
+
+  .facturasLiqEditDoc{
+    white-space: normal;
+  }
+
+  .facturasLiqEditBody{
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .facturasLiqEditSection{
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .facturasLiqEditTop,
+  .facturasLiqEditFooter{
+    grid-template-columns: 1fr;
+  }
+
+  .facturasLiqEditFooterRight{
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .facturasLiqModalBtn,
+  .facturasLiqInput,
+  .facturasLiqSelect{
+    width: 100%;
+  }
+
+}
