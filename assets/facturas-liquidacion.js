@@ -348,7 +348,23 @@ function ensureFacturasLiquidacionStyles() {
   style.textContent = `
     #facturasLiquidacionCard{
       position: relative;
+      width: min(1100px, calc(100vw - 32px));
+      margin: 0 auto;
       padding-top: 20px;
+      box-sizing: border-box;
+    }
+
+    #facturasLiquidacionEstado{
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto 14px auto;
+      text-align: center;
+    }
+
+    #facturasLiquidacionList{
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto;
     }
 
     .facturasLiqFloatingWrap{
@@ -390,13 +406,15 @@ function ensureFacturasLiquidacionStyles() {
       background: #fff;
       border: 1px solid #d8dee8;
       border-radius: 22px;
-      padding: 18px 18px 20px;
+      padding: 20px 22px 22px;
       box-shadow: 0 8px 24px rgba(15,23,42,.06);
-      margin-bottom: 14px;
+      margin: 0 auto 14px auto;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .facturasLiqCard.facturasLiqCardCompact{
-      padding: 16px 18px 18px;
+      padding: 18px 22px 20px;
     }
 
     .facturasLiqCardHead{
@@ -404,23 +422,27 @@ function ensureFacturasLiquidacionStyles() {
     }
 
     .facturasLiqDoc{
-      font-size: 1.05rem;
+      font-size: 1.12rem;
       font-weight: 900;
       line-height: 1.15;
       color: #0f172a;
-      word-break: break-word;
+      word-break: normal;
+      overflow-wrap: normal;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .facturasLiqFecha{
       margin-top: 6px;
-      font-size: .95rem;
+      font-size: .96rem;
       font-weight: 700;
       color: #6b7280;
     }
 
     .facturasLiqProveedor{
-      font-size: .98rem;
-      line-height: 1.25;
+      font-size: 1rem;
+      line-height: 1.28;
       color: #374151;
       margin-bottom: 14px;
       word-break: break-word;
@@ -436,18 +458,18 @@ function ensureFacturasLiquidacionStyles() {
 
     .facturasLiqMontoLabel{
       color: #6b7280;
-      font-size: .95rem;
+      font-size: .96rem;
     }
 
     .facturasLiqMontoValue{
       color: #0f172a;
-      font-size: 1rem;
+      font-size: 1.04rem;
     }
 
     .facturasLiqEstado{
       margin-bottom: 14px;
       font-weight: 800;
-      font-size: .98rem;
+      font-size: .99rem;
     }
 
     .facturasLiqEstado.estadoPendiente{ color: #92400e; }
@@ -500,6 +522,7 @@ function ensureFacturasLiquidacionStyles() {
       color: #475569;
       text-align: center;
       background: #fff;
+      box-sizing: border-box;
     }
 
     .facturasLiqSkeleton{
@@ -599,6 +622,25 @@ function ensureFacturasLiquidacionStyles() {
       background: #fff;
     }
 
+    @media (max-width: 900px) {
+      #facturasLiquidacionCard{
+        width: min(100%, calc(100vw - 20px));
+      }
+
+      #facturasLiquidacionEstado,
+      #facturasLiquidacionList{
+        max-width: 100%;
+      }
+
+      .facturasLiqDoc{
+        white-space: normal;
+        overflow: visible;
+        text-overflow: initial;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+    }
+
     @media (max-width: 640px) {
       .facturasLiqFloatingWrap{
         right: 10px;
@@ -608,6 +650,14 @@ function ensureFacturasLiquidacionStyles() {
       .facturasLiqFloatingBtn{
         min-width: 122px;
         padding: 11px 14px;
+      }
+
+      .facturasLiqCard{
+        padding: 16px 16px 18px;
+      }
+
+      .facturasLiqCard.facturasLiqCardCompact{
+        padding: 16px 16px 18px;
       }
 
       .facturasLiqPdfModal{
@@ -858,7 +908,7 @@ function createPendienteCard(factura) {
 
   wrapper.innerHTML = `
     <div class="facturasLiqCardHead">
-      <div class="facturasLiqDoc">${formatDocumentLabel(factura)}</div>
+      <div class="facturasLiqDoc" title="${formatDocumentLabel(factura)}">${formatDocumentLabel(factura)}</div>
       <div class="facturasLiqFecha">${formatIssueDate(factura?.issue_date)}</div>
     </div>
 
@@ -911,7 +961,7 @@ function createReclamadaMiaCard(factura) {
 
   wrapper.innerHTML = `
     <div class="facturasLiqCardHead">
-      <div class="facturasLiqDoc">${formatDocumentLabel(factura)}</div>
+      <div class="facturasLiqDoc" title="${formatDocumentLabel(factura)}">${formatDocumentLabel(factura)}</div>
       <div class="facturasLiqFecha">${formatIssueDate(factura?.issue_date)}</div>
     </div>
 
