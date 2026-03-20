@@ -5,6 +5,7 @@
 const LIQ_MODAL_ID = "facturasLiqEditModal";
 const LIQ_MODAL_CSS_ID = "facturas-liquidacion-modal-css-link";
 const PDF_MODAL_ID = "facturasLiqPdfModal";
+const PICKER_MODAL_ID = "facturasLiqPickerModal";
 
 const OPCIONES_LIQ_TYPE = [
   "Tarjeta TMI",
@@ -43,6 +44,15 @@ export function createFacturasLiquidacionModalController({
     hiddenForPdf: false,
     pdfObserver: null,
     pdfBridgeBound: false,
+
+    // picker bottom sheet
+    pickerOpen: false,
+    pickerType: "", // "cliente" | "proyecto"
+    pickerSearch: {
+      cliente: "",
+      proyecto: "",
+    },
+    pickerSelectedValue: "",
   };
 
   //#4 utilidades base
@@ -371,11 +381,12 @@ export function createFacturasLiquidacionModalController({
     }, 60);
   }
 
-  //#7 asegurar estructura DOM
+  //#7 asegurar estructura DOM principal
   // crea el modal una sola vez y conecta eventos base
   function ensureModal() {
     ensureStylesheet();
     ensurePdfBridge();
+    ensurePickerModal();
 
     let modal = document.getElementById(LIQ_MODAL_ID);
     if (modal) return modal;
@@ -478,47 +489,45 @@ export function createFacturasLiquidacionModalController({
             <div class="facturasLiqEditGridTwo">
               <div class="facturasLiqField">
                 <label class="facturasLiqFieldLabel" for="facturasLiqClienteInput">Cliente</label>
-                <div class="facturasLiqComboWrap">
-                  <div class="facturasLiqInputActionRow">
-                    <input
-                      id="facturasLiqClienteInput"
-                      class="facturasLiqInput"
-                      type="text"
-                      autocomplete="off"
-                      placeholder="Buscar cliente..."
-                    />
-                    <button
-                      id="facturasLiqClearClienteBtn"
-                      type="button"
-                      class="facturasLiqModalBtn facturasLiqModalBtnLight"
-                    >
-                      Limpiar
-                    </button>
-                  </div>
-                  <div id="facturasLiqClienteDropdown" class="facturasLiqComboDrop" style="display:none;"></div>
+                <div class="facturasLiqPickerTriggerWrap">
+                  <button
+                    id="facturasLiqClienteTrigger"
+                    type="button"
+                    class="facturasLiqPickerTrigger"
+                  >
+                    <span id="facturasLiqClienteInput" class="facturasLiqPickerTriggerText">Seleccionar cliente...</span>
+                    <span class="facturasLiqPickerTriggerIcon">⌄</span>
+                  </button>
+
+                  <button
+                    id="facturasLiqClearClienteBtn"
+                    type="button"
+                    class="facturasLiqModalBtn facturasLiqModalBtnLight facturasLiqPickerClearBtn"
+                  >
+                    Limpiar
+                  </button>
                 </div>
               </div>
 
               <div class="facturasLiqField">
                 <label class="facturasLiqFieldLabel" for="facturasLiqProyectoInput">Proyecto</label>
-                <div class="facturasLiqComboWrap">
-                  <div class="facturasLiqInputActionRow">
-                    <input
-                      id="facturasLiqProyectoInput"
-                      class="facturasLiqInput"
-                      type="text"
-                      autocomplete="off"
-                      placeholder="Buscar por código o nombre SICLA..."
-                    />
-                    <button
-                      id="facturasLiqClearProyectoBtn"
-                      type="button"
-                      class="facturasLiqModalBtn facturasLiqModalBtnLight"
-                    >
-                      Limpiar
-                    </button>
-                  </div>
-                  <div id="facturasLiqProyectoDropdown" class="facturasLiqComboDrop" style="display:none;"></div>
+                <div class="facturasLiqPickerTriggerWrap">
+                  <button
+                    id="facturasLiqProyectoTrigger"
+                    type="button"
+                    class="facturasLiqPickerTrigger"
+                  >
+                    <span id="facturasLiqProyectoInput" class="facturasLiqPickerTriggerText">Seleccionar proyecto...</span>
+                    <span class="facturasLiqPickerTriggerIcon">⌄</span>
+                  </button>
+
+                  <button
+                    id="facturasLiqClearProyectoBtn"
+                    type="button"
+                    class="facturasLiqModalBtn facturasLiqModalBtnLight facturasLiqPickerClearBtn"
+                  >
+                    Limpiar
+                  </button>
                 </div>
               </div>
             </div>
@@ -586,7 +595,7 @@ export function createFacturasLiquidacionModalController({
     document.body.appendChild(modal);
 
     modal.addEventListener("click", (e) => {
-      if (e.target === modal && !state.guardando) {
+      if (e.target === modal && !state.guardando && !state.pickerOpen) {
         close();
       }
     });
@@ -602,6 +611,11 @@ export function createFacturasLiquidacionModalController({
     });
 
     document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.pickerOpen) {
+        closePicker();
+        return;
+      }
+
       if (e.key === "Escape" && state.modalOpen && !state.guardando) {
         close();
       }
@@ -610,7 +624,75 @@ export function createFacturasLiquidacionModalController({
     return modal;
   }
 
-  //#8 obtener referencias del modal
+  //#8 asegurar picker modal
+  // crea el bottom sheet reutilizable para cliente y proyecto
+  function ensurePickerModal() {
+    let modal = document.getElementById(PICKER_MODAL_ID);
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = PICKER_MODAL_ID;
+    modal.className = "facturasLiqPickerBack";
+    modal.innerHTML = `
+      <div class="facturasLiqPickerSheet" role="dialog" aria-modal="true" aria-label="Selector">
+        <div class="facturasLiqPickerHandleWrap">
+          <div class="facturasLiqPickerHandle"></div>
+        </div>
+
+        <div class="facturasLiqPickerHead">
+          <div class="facturasLiqPickerHeadText">
+            <h3 id="facturasLiqPickerTitle">Seleccionar</h3>
+            <p id="facturasLiqPickerSubtitle">Busca y elige una opción</p>
+          </div>
+          <button
+            id="facturasLiqPickerCloseBtn"
+            type="button"
+            class="facturasLiqModalCloseBtn"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div class="facturasLiqPickerSearchWrap">
+          <input
+            id="facturasLiqPickerSearchInput"
+            class="facturasLiqInput facturasLiqPickerSearchInput"
+            type="text"
+            autocomplete="off"
+            placeholder="Buscar..."
+          />
+        </div>
+
+        <div
+          id="facturasLiqPickerList"
+          class="facturasLiqPickerList"
+        ></div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closePicker();
+      }
+    });
+
+    modal.querySelector("#facturasLiqPickerCloseBtn")?.addEventListener("click", () => {
+      closePicker();
+    });
+
+    modal.querySelector("#facturasLiqPickerSearchInput")?.addEventListener("input", (e) => {
+      const value = String(e.target?.value || "");
+      if (!state.pickerType) return;
+      state.pickerSearch[state.pickerType] = value;
+      renderPickerList();
+    });
+
+    return modal;
+  }
+
+  //#9 obtener referencias del modal
   // centraliza el acceso a nodos para evitar querySelector repetidos en todo lado
   function getEls() {
     const modal = document.getElementById(LIQ_MODAL_ID);
@@ -630,12 +712,15 @@ export function createFacturasLiquidacionModalController({
       proyectoStatus: modal.querySelector("#facturasLiqEditProyectoStatus"),
       capaActual: modal.querySelector("#facturasLiqEditCapaActual"),
       pdfBtn: modal.querySelector("#facturasLiqEditPdfBtn"),
+
+      clienteTrigger: modal.querySelector("#facturasLiqClienteTrigger"),
       clienteInput: modal.querySelector("#facturasLiqClienteInput"),
       clearClienteBtn: modal.querySelector("#facturasLiqClearClienteBtn"),
-      clienteDrop: modal.querySelector("#facturasLiqClienteDropdown"),
+
+      proyectoTrigger: modal.querySelector("#facturasLiqProyectoTrigger"),
       proyectoInput: modal.querySelector("#facturasLiqProyectoInput"),
       clearProyectoBtn: modal.querySelector("#facturasLiqClearProyectoBtn"),
-      proyectoDrop: modal.querySelector("#facturasLiqProyectoDropdown"),
+
       capaSelect: modal.querySelector("#facturasLiqCapaSelect"),
       responsableSelect: modal.querySelector("#facturasLiqResponsableSelect"),
       estadoInput: modal.querySelector("#facturasLiqEstadoInput"),
@@ -648,7 +733,22 @@ export function createFacturasLiquidacionModalController({
     };
   }
 
-  //#9 mensajes del modal
+  //#10 obtener referencias del picker
+  // centraliza acceso al bottom sheet selector
+  function getPickerEls() {
+    const modal = document.getElementById(PICKER_MODAL_ID);
+    if (!modal) return null;
+
+    return {
+      modal,
+      title: modal.querySelector("#facturasLiqPickerTitle"),
+      subtitle: modal.querySelector("#facturasLiqPickerSubtitle"),
+      searchInput: modal.querySelector("#facturasLiqPickerSearchInput"),
+      list: modal.querySelector("#facturasLiqPickerList"),
+    };
+  }
+
+  //#11 mensajes del modal
   // muestra feedback en azul, rojo o verde según el caso
   function setMessage(type, text) {
     const els = getEls();
@@ -674,7 +774,7 @@ export function createFacturasLiquidacionModalController({
     target.style.display = "";
   }
 
-  //#10 catálogos
+  //#12 catálogos
   // carga proyectos SICLA y empleados activos una sola vez
   async function ensureCatalogs() {
     if (state.catalogsLoaded) return;
@@ -758,7 +858,7 @@ export function createFacturasLiquidacionModalController({
     });
   }
 
-  //#11 leer factura completa
+  //#13 leer factura completa
   // trae todos los campos necesarios desde inv.invoice_documents
   async function fetchFacturaCompletaById(facturaId) {
     const supabase = getSupabase();
@@ -822,7 +922,7 @@ export function createFacturasLiquidacionModalController({
     return data;
   }
 
-  //#12 referencias de proyecto actual
+  //#14 referencias de proyecto actual
   // resuelve el proyecto actual desde el catálogo por código exacto
   function getCurrentProject() {
     if (!state.facturaActual) return null;
@@ -836,7 +936,7 @@ export function createFacturasLiquidacionModalController({
     );
   }
 
-  //#13 resumen actual
+  //#15 resumen actual
   // refresca la segunda tarjeta con datos actuales del cliente/proyecto/capa
   function updateCurrentInfo() {
     const els = getEls();
@@ -861,7 +961,27 @@ export function createFacturasLiquidacionModalController({
       String(factura.capa || "").trim() || "Sin capa asignada";
   }
 
-  //#14 selects del modal
+  //#16 actualizar textos de triggers
+  // sincroniza el texto visible de cliente y proyecto
+  function updatePickerTriggerTexts() {
+    const els = getEls();
+    const factura = state.facturaActual;
+    if (!els || !factura) return;
+
+    const clientText = String(factura.client_name || "").trim();
+    const projectText = buildProjectText({
+      project_code: factura.project_code,
+      name: factura.project_name,
+    });
+
+    els.clienteInput.textContent = clientText || "Seleccionar cliente...";
+    els.clienteInput.classList.toggle("is-placeholder", !clientText);
+
+    els.proyectoInput.textContent = projectText || "Seleccionar proyecto...";
+    els.proyectoInput.classList.toggle("is-placeholder", !projectText);
+  }
+
+  //#17 selects del modal
   // llena capa, tipo y responsable usando el estado actual
   function populateSelects(factura) {
     const els = getEls();
@@ -904,92 +1024,20 @@ export function createFacturasLiquidacionModalController({
     els.comentarioInput.value = String(factura?.liq_comments || "").trim();
   }
 
-  //#15 dropdown clientes
-  // muestra clientes únicos filtrados desde SICLA
-  function hideClienteDropdown() {
-    const els = getEls();
-    if (!els) return;
-    els.clienteDrop.style.display = "none";
-  }
-
-  function renderClienteDropdown() {
-    const els = getEls();
-    if (!els || !state.facturaActual) return;
-
-    const filtro = normalizeText(els.clienteInput.value);
-
-    const unicos = Array.from(
+  //#18 picker data helpers
+  // construye las opciones visibles del selector nativo
+  function getUniqueClientes() {
+    return Array.from(
       new Set(
         state.proyectosSicla
           .map((item) => String(item.client_name || "").trim())
           .filter(Boolean)
       )
     ).sort((a, b) => a.localeCompare(b, "es"));
-
-    const visibles = !filtro
-      ? unicos.slice(0, 20)
-      : unicos.filter((item) => item.toLowerCase().includes(filtro)).slice(0, 20);
-
-    if (!visibles.length) {
-      els.clienteDrop.innerHTML = `<div class="facturasLiqComboEmpty">No hay clientes que coincidan.</div>`;
-    } else {
-      els.clienteDrop.innerHTML = visibles
-        .map(
-          (cliente) => `
-            <button type="button" class="facturasLiqComboOption" data-cliente="${escapeHtml(cliente)}">
-              <span class="facturasLiqComboMain">${escapeHtml(cliente)}</span>
-            </button>
-          `
-        )
-        .join("");
-    }
-
-    els.clienteDrop.style.display = "";
-
-    els.clienteDrop.querySelectorAll("[data-cliente]").forEach((btn) => {
-      btn.addEventListener("mousedown", (e) => e.preventDefault());
-      btn.addEventListener("click", () => {
-        const value = String(btn.getAttribute("data-cliente") || "").trim();
-
-        els.clienteInput.value = value;
-        state.facturaActual.client_name = value;
-        state.facturaActual._clienteSeleccionadoExacto = value;
-
-        const proyectoActualCode = String(state.facturaActual.project_code || "").trim();
-
-        const proyectoSigue = state.proyectosSicla.some(
-          (item) =>
-            String(item.client_name || "").trim() === value &&
-            String(item.project_code || "").trim() === proyectoActualCode
-        );
-
-        if (!proyectoSigue) {
-          state.facturaActual.project_code = "";
-          state.facturaActual.project_name = "";
-          els.proyectoInput.value = "";
-        }
-
-        updateCurrentInfo();
-        hideClienteDropdown();
-      });
-    });
   }
 
-  //#16 dropdown proyectos
-  // muestra proyectos por cliente y búsqueda actual
-  function hideProyectoDropdown() {
-    const els = getEls();
-    if (!els) return;
-    els.proyectoDrop.style.display = "none";
-  }
-
-  function renderProyectoDropdown() {
-    const els = getEls();
-    if (!els || !state.facturaActual) return;
-
-    const filtro = normalizeText(els.proyectoInput.value);
-    const cliente = String(state.facturaActual.client_name || "").trim();
-
+  function getVisibleProjects() {
+    const cliente = String(state.facturaActual?.client_name || "").trim();
     let base = [...state.proyectosSicla];
 
     if (cliente) {
@@ -998,77 +1046,227 @@ export function createFacturasLiquidacionModalController({
       );
     }
 
-    const visibles = !filtro
-      ? base.slice(0, 20)
-      : base
-          .filter((item) => {
-            const code = normalizeText(item.project_code);
-            const name = normalizeText(item.name);
-            const clientName = normalizeText(item.client_name);
-            const status = normalizeText(item.project_status);
+    return base;
+  }
 
-            return (
-              code.includes(filtro) ||
-              name.includes(filtro) ||
-              clientName.includes(filtro) ||
-              status.includes(filtro)
-            );
-          })
-          .slice(0, 20);
+  function getPickerItems() {
+    const search = normalizeText(state.pickerSearch[state.pickerType] || "");
 
-    if (!visibles.length) {
-      els.proyectoDrop.innerHTML = `<div class="facturasLiqComboEmpty">No hay proyectos que coincidan.</div>`;
-    } else {
-      els.proyectoDrop.innerHTML = visibles
-        .map(
-          (item) => `
-            <button
-              type="button"
-              class="facturasLiqComboOption"
-              data-code="${escapeHtml(item.project_code)}"
-            >
-              <span class="facturasLiqComboMain">${escapeHtml(item.project_code)} · ${escapeHtml(item.name || "")}</span>
-              ${item.client_name ? `<span class="facturasLiqComboSub">${escapeHtml(item.client_name)}</span>` : ""}
-              ${item.project_status ? `<span class="facturasLiqComboMuted">Estado SICLA: ${escapeHtml(item.project_status)}</span>` : ""}
-            </button>
-          `
-        )
-        .join("");
+    if (state.pickerType === "cliente") {
+      let items = getUniqueClientes();
+
+      if (search) {
+        items = items.filter((item) => normalizeText(item).includes(search));
+      }
+
+      return items.slice(0, 200).map((cliente) => ({
+        key: cliente,
+        value: cliente,
+        title: cliente,
+        subtitle: "",
+        meta: "",
+        selected:
+          normalizeText(cliente) ===
+          normalizeText(String(state.facturaActual?.client_name || "").trim()),
+      }));
     }
 
-    els.proyectoDrop.style.display = "";
+    if (state.pickerType === "proyecto") {
+      let items = getVisibleProjects();
 
-    els.proyectoDrop.querySelectorAll("[data-code]").forEach((btn) => {
-      btn.addEventListener("mousedown", (e) => e.preventDefault());
-      btn.addEventListener("click", () => {
-        const code = String(btn.getAttribute("data-code") || "").trim();
+      if (search) {
+        items = items.filter((item) => {
+          const code = normalizeText(item.project_code);
+          const name = normalizeText(item.name);
+          const clientName = normalizeText(item.client_name);
+          const status = normalizeText(item.project_status);
 
-        const project = state.proyectosSicla.find(
-          (item) => String(item.project_code || "").trim() === code
-        );
+          return (
+            code.includes(search) ||
+            name.includes(search) ||
+            clientName.includes(search) ||
+            status.includes(search)
+          );
+        });
+      }
 
-        if (!project) return;
+      return items.slice(0, 250).map((item) => ({
+        key: item.project_code,
+        value: item.project_code,
+        title: `${item.project_code} · ${item.name || ""}`.trim(),
+        subtitle: item.client_name || "",
+        meta: item.project_status ? `Estado SICLA: ${item.project_status}` : "",
+        selected:
+          normalizeText(item.project_code) ===
+          normalizeText(String(state.facturaActual?.project_code || "").trim()),
+      }));
+    }
 
-        state.facturaActual.project_code = String(project.project_code || "").trim();
-        state.facturaActual.project_name = String(project.name || "").trim();
-        state.facturaActual.client_name =
-          String(project.client_name || "").trim() ||
-          String(state.facturaActual.client_name || "").trim();
+    return [];
+  }
 
-        state.facturaActual._clienteSeleccionadoExacto = String(
-          state.facturaActual.client_name || ""
-        ).trim();
+  //#19 picker open
+  // abre el bottom sheet para cliente o proyecto
+  function openPicker(type) {
+    if (!state.facturaActual) return;
 
-        els.proyectoInput.value = buildProjectText(project);
-        els.clienteInput.value = String(state.facturaActual.client_name || "").trim();
+    const picker = getPickerEls();
+    if (!picker) return;
 
-        updateCurrentInfo();
-        hideProyectoDropdown();
-      });
+    state.pickerType = type;
+    state.pickerOpen = true;
+    state.pickerSelectedValue =
+      type === "cliente"
+        ? String(state.facturaActual.client_name || "").trim()
+        : String(state.facturaActual.project_code || "").trim();
+
+    picker.modal.style.display = "flex";
+
+    if (type === "cliente") {
+      picker.title.textContent = "Seleccionar cliente";
+      picker.subtitle.textContent = "Busca el cliente y tócala una vez para elegirlo";
+      picker.searchInput.placeholder = "Buscar cliente...";
+    } else {
+      picker.title.textContent = "Seleccionar proyecto";
+      picker.subtitle.textContent = "Busca por código, nombre o estado SICLA";
+      picker.searchInput.placeholder = "Buscar proyecto...";
+    }
+
+    picker.searchInput.value = String(state.pickerSearch[type] || "");
+    renderPickerList();
+
+    setTimeout(() => {
+      picker.searchInput.focus();
+      scrollPickerToSelected();
+    }, 40);
+
+    log("picker abierto:", type);
+  }
+
+  //#20 picker close
+  // cierra el bottom sheet selector
+  function closePicker() {
+    const picker = getPickerEls();
+    if (!picker) return;
+
+    picker.modal.style.display = "none";
+    state.pickerOpen = false;
+    state.pickerType = "";
+    state.pickerSelectedValue = "";
+
+    log("picker cerrado");
+  }
+
+  //#21 picker scroll seleccionado
+  // lleva la lista a la opción actualmente seleccionada
+  function scrollPickerToSelected() {
+    const picker = getPickerEls();
+    if (!picker) return;
+
+    const selectedEl = picker.list.querySelector(".facturasLiqPickerOption.is-selected");
+    if (!selectedEl) return;
+
+    selectedEl.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
     });
   }
 
-  //#17 eventos del modal
+  //#22 picker render
+  // dibuja la lista visible del bottom sheet
+  function renderPickerList() {
+    const picker = getPickerEls();
+    if (!picker) return;
+
+    const items = getPickerItems();
+
+    if (!items.length) {
+      picker.list.innerHTML = `
+        <div class="facturasLiqPickerEmpty">
+          No hay opciones que coincidan.
+        </div>
+      `;
+      return;
+    }
+
+    picker.list.innerHTML = items
+      .map((item) => `
+        <button
+          type="button"
+          class="facturasLiqPickerOption ${item.selected ? "is-selected" : ""}"
+          data-value="${escapeHtml(item.value)}"
+        >
+          <div class="facturasLiqPickerOptionMainRow">
+            <span class="facturasLiqPickerOptionTitle">${escapeHtml(item.title)}</span>
+            ${item.selected ? `<span class="facturasLiqPickerOptionCheck">✓</span>` : ""}
+          </div>
+          ${item.subtitle ? `<div class="facturasLiqPickerOptionSub">${escapeHtml(item.subtitle)}</div>` : ""}
+          ${item.meta ? `<div class="facturasLiqPickerOptionMeta">${escapeHtml(item.meta)}</div>` : ""}
+        </button>
+      `)
+      .join("");
+
+    picker.list.querySelectorAll("[data-value]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const value = String(btn.getAttribute("data-value") || "").trim();
+        applyPickerSelection(value);
+      });
+    });
+
+    setTimeout(scrollPickerToSelected, 20);
+  }
+
+  //#23 aplicar selección picker
+  // guarda cliente o proyecto elegido y refresca la vista
+  function applyPickerSelection(value) {
+    const activeType = state.pickerType;
+    if (!state.facturaActual || !activeType) return;
+
+    if (activeType === "cliente") {
+      state.facturaActual.client_name = value;
+      state.facturaActual._clienteSeleccionadoExacto = value;
+
+      const proyectoActualCode = String(state.facturaActual.project_code || "").trim();
+      const proyectoSigue = state.proyectosSicla.some(
+        (item) =>
+          String(item.client_name || "").trim() === value &&
+          String(item.project_code || "").trim() === proyectoActualCode
+      );
+
+      if (!proyectoSigue) {
+        state.facturaActual.project_code = "";
+        state.facturaActual.project_name = "";
+      }
+    }
+
+    if (activeType === "proyecto") {
+      const project = state.proyectosSicla.find(
+        (item) => String(item.project_code || "").trim() === value
+      );
+      if (!project) return;
+
+      state.facturaActual.project_code = String(project.project_code || "").trim();
+      state.facturaActual.project_name = String(project.name || "").trim();
+      state.facturaActual.client_name =
+        String(project.client_name || "").trim() ||
+        String(state.facturaActual.client_name || "").trim();
+
+      state.facturaActual._clienteSeleccionadoExacto = String(
+        state.facturaActual.client_name || ""
+      ).trim();
+    }
+
+    updatePickerTriggerTexts();
+    updateCurrentInfo();
+    closePicker();
+
+    log("picker selección aplicada:", {
+      type: activeType,
+      value,
+    });
+  }
+
+  //#24 eventos del modal
   // amarra listeners una sola vez
   function bindEvents() {
     const els = getEls();
@@ -1082,81 +1280,36 @@ export function createFacturasLiquidacionModalController({
       openPdfFromLiquidacion();
     });
 
+    els.clienteTrigger.addEventListener("click", () => {
+      if (!state.facturaActual) return;
+      openPicker("cliente");
+    });
+
+    els.proyectoTrigger.addEventListener("click", () => {
+      if (!state.facturaActual) return;
+      openPicker("proyecto");
+    });
+
     els.clearClienteBtn.addEventListener("click", () => {
       if (!state.facturaActual) return;
 
-      els.clienteInput.value = "";
       state.facturaActual.client_name = "";
       state.facturaActual._clienteSeleccionadoExacto = "";
       state.facturaActual.project_code = "";
       state.facturaActual.project_name = "";
-      els.proyectoInput.value = "";
 
-      renderClienteDropdown();
+      updatePickerTriggerTexts();
       updateCurrentInfo();
     });
 
     els.clearProyectoBtn.addEventListener("click", () => {
       if (!state.facturaActual) return;
 
-      els.proyectoInput.value = "";
       state.facturaActual.project_code = "";
       state.facturaActual.project_name = "";
 
-      renderProyectoDropdown();
+      updatePickerTriggerTexts();
       updateCurrentInfo();
-    });
-
-    els.clienteInput.addEventListener("input", () => {
-      if (!state.facturaActual) return;
-
-      state.facturaActual.client_name = String(els.clienteInput.value || "").trim();
-
-      if (
-        normalizeText(els.clienteInput.value) !==
-        normalizeText(state.facturaActual._clienteSeleccionadoExacto || "")
-      ) {
-        state.facturaActual.project_code = "";
-        state.facturaActual.project_name = "";
-        els.proyectoInput.value = "";
-      }
-
-      renderClienteDropdown();
-      updateCurrentInfo();
-    });
-
-    els.clienteInput.addEventListener("focus", () => {
-      renderClienteDropdown();
-    });
-
-    els.clienteInput.addEventListener("blur", () => {
-      setTimeout(hideClienteDropdown, 120);
-    });
-
-    els.proyectoInput.addEventListener("input", () => {
-      if (!state.facturaActual) return;
-
-      const typed = String(els.proyectoInput.value || "").trim();
-      const currentText = buildProjectText({
-        project_code: state.facturaActual.project_code,
-        name: state.facturaActual.project_name,
-      });
-
-      if (typed !== currentText) {
-        state.facturaActual.project_code = "";
-        state.facturaActual.project_name = "";
-      }
-
-      renderProyectoDropdown();
-      updateCurrentInfo();
-    });
-
-    els.proyectoInput.addEventListener("focus", () => {
-      renderProyectoDropdown();
-    });
-
-    els.proyectoInput.addEventListener("blur", () => {
-      setTimeout(hideProyectoDropdown, 120);
     });
 
     els.capaSelect.addEventListener("change", () => {
@@ -1170,7 +1323,7 @@ export function createFacturasLiquidacionModalController({
     });
   }
 
-  //#18 llenar modal
+  //#25 llenar modal
   // coloca los valores actuales de la factura en la UI
   function fill(factura) {
     const els = getEls();
@@ -1191,13 +1344,8 @@ export function createFacturasLiquidacionModalController({
     els.estadoVisible.textContent = estadoVisible;
     els.estadoInput.value = estadoVisible;
 
-    els.clienteInput.value = String(factura.client_name || "").trim();
-    els.proyectoInput.value = buildProjectText({
-      project_code: factura.project_code,
-      name: factura.project_name,
-    });
-
     populateSelects(factura);
+    updatePickerTriggerTexts();
     updateCurrentInfo();
 
     els.pdfBtn.disabled = !resolvePdfInfo(factura).hasPdf;
@@ -1205,13 +1353,13 @@ export function createFacturasLiquidacionModalController({
     els.guardarBtn.textContent = "Guardar liquidación";
   }
 
-  //#19 validación
+  //#26 validación
   // valida datos mínimos obligatorios antes del update
   function validate() {
     const els = getEls();
     if (!els || !state.facturaActual) return "No se encontró la factura a guardar.";
 
-    const clientName = String(els.clienteInput.value || "").trim();
+    const clientName = String(state.facturaActual.client_name || "").trim();
     const projectCode = String(state.facturaActual.project_code || "").trim();
     const tipo = String(els.tipoSelect.value || "").trim();
     const capa = String(els.capaSelect.value || "").trim();
@@ -1234,7 +1382,7 @@ export function createFacturasLiquidacionModalController({
     return "";
   }
 
-  //#20 guardar
+  //#27 guardar
   // actualiza inv.invoice_documents y notifica al módulo padre
   async function save() {
     if (state.guardando) return;
@@ -1260,7 +1408,7 @@ export function createFacturasLiquidacionModalController({
         String(factura.project_code || "").trim()
     );
 
-    const clientName = String(els.clienteInput.value || "").trim();
+    const clientName = String(factura.client_name || "").trim();
     const tipo = String(els.tipoSelect.value || "").trim();
     const capa = String(els.capaSelect.value || "").trim();
     const responsable = String(els.responsableSelect.value || "").trim();
@@ -1374,7 +1522,7 @@ export function createFacturasLiquidacionModalController({
     }
   }
 
-  //#21 API pública open
+  //#28 API pública open
   // abre el modal cargando catálogos y factura completa por id
   async function open(facturaBase) {
     const facturaId = String(facturaBase?.id || "").trim();
@@ -1421,14 +1569,13 @@ export function createFacturasLiquidacionModalController({
     }
   }
 
-  //#22 API pública close
+  //#29 API pública close
   // cierra el modal y limpia estado temporal
   function close() {
     const modal = document.getElementById(LIQ_MODAL_ID);
     if (!modal) return;
 
-    hideClienteDropdown();
-    hideProyectoDropdown();
+    closePicker();
 
     modal.style.display = "none";
     modal.style.visibility = "";
@@ -1443,7 +1590,7 @@ export function createFacturasLiquidacionModalController({
     document.body.style.overflow = "";
   }
 
-  //#23 API pública ensure
+  //#30 API pública ensure
   // deja el modal creado y listo sin abrirlo
   function ensure() {
     ensureModal();
@@ -1452,7 +1599,7 @@ export function createFacturasLiquidacionModalController({
     return true;
   }
 
-  //#24 exports del controlador
+  //#31 exports del controlador
   // expone solo lo necesario al archivo orquestador
   return {
     ensure,
